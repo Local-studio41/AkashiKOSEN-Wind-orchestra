@@ -59,7 +59,7 @@
             <section id="news">
                 <h2><i class="fas fa-newspaper"></i> What's New</h2>
                 <ul class="news-list">
-                </ul>
+                    </ul>
                 <div class="more-link"><a href="info.html">もっと見る ≫</a></div>
             </section>
 
@@ -75,15 +75,19 @@
     </main>
 
     <footer><p>&copy; 明石工業高等専門学校吹奏楽部 情報宣伝係</p></footer>
+    
     <script src="js/script.js"></script>
     
     <script>
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbwhxlkO95GImhR9lSgHaFf0PB_s5o1tjoOd19pP20Q9TbqaMlLpCoQOohZv-PCaHlWZ8A/exec";
-
+        const DATA_URL = "data/all_data.json";
         function renderNews(items) {
             const newsList = document.querySelector('.news-list');
+            if (!items || items.length === 0) {
+                newsList.innerHTML = '<li>更新情報はありません。</li>';
+                return;
+            }
+
             let html = '';
-            
             items.forEach(row => {
                 const date = row[0] || '';  
                 const cat = row[1] || 'お知らせ';
@@ -100,38 +104,36 @@
             });
             newsList.innerHTML = html;
         }
-
         async function loadLatestNews() {
             const newsList = document.querySelector('.news-list');
-            
-            const cachedData = localStorage.getItem('latest_news_cache');
+            const cachedData = localStorage.getItem('site_data_cache');
             if (cachedData) {
-                renderNews(JSON.parse(cachedData));
+                const parsed = JSON.parse(cachedData);
+                if (parsed.news && parsed.news.length > 1) {
+                    const latest = parsed.news.slice(1).reverse().slice(0, 3);
+                    renderNews(latest);
+                }
             } else {
                 newsList.innerHTML = '<li>読み込み中...</li>';
             }
-
             try {
-                const response = await fetch(`${GAS_URL}?type=news`);
+                const response = await fetch(DATA_URL);
+                if (!response.ok) throw new Error("JSON file not found");
+                
                 const data = await response.json();
-                const newsRows = data.news;
-
-                if (newsRows && newsRows.length > 1) {
-                    const latestItems = newsRows.slice(1).reverse().slice(0, 3);
-                    localStorage.setItem('latest_news_cache', JSON.stringify(latestItems));
+                localStorage.setItem('site_data_cache', JSON.stringify(data));
+                if (data.news && data.news.length > 1) {
+                    const latestItems = data.news.slice(1).reverse().slice(0, 3);
                     renderNews(latestItems);
-                } else if (!cachedData) {
-                    newsList.innerHTML = '<li>更新情報はありません。</li>';
                 }
 
             } catch (e) {
-                console.error("News Load Error:", e);
+                console.error("Data Load Error:", e);
                 if (!cachedData) {
                     newsList.innerHTML = '<li>情報の取得に失敗しました。</li>';
                 }
             }
         }
-
         window.addEventListener('DOMContentLoaded', loadLatestNews);
     </script>
 </body>

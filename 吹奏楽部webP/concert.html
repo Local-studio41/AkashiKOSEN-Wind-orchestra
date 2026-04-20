@@ -181,6 +181,7 @@
                 <li><a href="concert.html" class="active"><i class="fas fa-music"></i> 演奏会情報</a></li>
                 <li><a href="pages/activity.html"><i class="fas fa-users"></i> 活動紹介</a></li>
                 <li><a href="pages/members.html"><i class="fas fa-user-friends"></i> 部員紹介</a></li>
+                <li class="admin-link"><a href="pages/admin/index.html"><i class="fas fa-cog"></i> 運営管理</a></li>
             </ul>
         </nav>
     </aside>
@@ -196,23 +197,22 @@
     </main>
 
     <footer><p>© 明石工業高等専門学校吹奏楽部 情報宣伝係</p></footer>
+
     <div id="imageModal" class="modal" onclick="closeModal()">
-        <span class="modal-close">&times;</span>
+        <span class="modal-close">×</span>
         <img class="modal-content" id="modalImg" onclick="event.stopPropagation()">
     </div>
 
     <script src="js/script.js"></script>
     <script>
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbwhxlkO95GImhR9lSgHaFf0PB_s5o1tjoOd19pP20Q9TbqaMlLpCoQOohZv-PCaHlWZ8A/exec";
+        const DATA_URL = "data/all_data.json";
         
         function getFileDisplayInfo(url) {
             if (!url || typeof url !== 'string') return null;
-            
             const match = url.match(/[-\w]{25,}/);
             if (!match) return url.startsWith('http') ? { url: url, isPdf: false } : null;
             const fileId = match[0];
             const isPdf = url.toLowerCase().includes('pdf');
-            
             if (isPdf) {
                 return {
                     url: `https://drive.google.com/file/d/${fileId}/view?usp=sharing`,
@@ -220,11 +220,12 @@
                 };
             } else {
                 return {
-                    url: `https://lh3.googleusercontent.com/d/${fileId}=s3200`,
+                    url: `https://lh3.googleusercontent.com/d/${fileId}`,
                     isPdf: false
                 };
             }
         }
+
         function openModal(url) {
             const modal = document.getElementById("imageModal");
             const modalImg = document.getElementById("modalImg");
@@ -232,21 +233,23 @@
             modalImg.src = url;
             document.body.style.overflow = "hidden";
         }
+
         function closeModal() {
             const modal = document.getElementById("imageModal");
             modal.style.display = "none";
             document.body.style.overflow = "auto";
         }
+
         function renderConcerts(rows) {
             const container = document.getElementById('concert-container');
             if (!rows || rows.length <= 1) {
                 container.innerHTML = "<p>現在予定されている演奏会はありません。</p>";
                 return;
             }
-
             const data = rows.slice(1).reverse(); 
-            const next = data[0];
-            const pasts = data.slice(1);
+            const next = data[0]; 
+            const pasts = data.slice(1); 
+
             const formatDate = (val) => {
                 if (!val) return "";
                 let str = String(val).split('T')[0];
@@ -254,11 +257,10 @@
             };
 
             const concertDate = formatDate(next[2]);
-            const concertTime = formatDate(next[3]);
-
+            const concertTime = next[3] || "";
             const nextMedia = getFileDisplayInfo(next[6]); 
-            let nextMediaHtml = '';
             
+            let nextMediaHtml = '';
             if (nextMedia) {
                 if (nextMedia.isPdf) {
                     nextMediaHtml = `
@@ -274,13 +276,13 @@
                         </button>`;
                 }
             }
+
             let html = `
                 <section class="concert-section">
                     <div class="next-concert-card">
                         <div class="next-concert-header">
                             <h2>${next[1]}</h2>
                         </div>
-
                         <div class="next-concert-body">
                             <div class="next-concert-info">
                                 <table class="concert-details-table">
@@ -290,14 +292,14 @@
                                 </table>
                                 <div class="concert-description">${String(next[5] || "").trim()}</div>
                             </div>
-
                             <div class="next-concert-img">
-                                ${nextMediaHtml || '<div class="no-image">No Image</div>'}
+                                ${nextMediaHtml || '<div class="no-image" style="padding:40px; color:#ccc;">No Image</div>'}
                             </div>
                         </div>
                     </div>
                 </section>
             `;
+
             if (pasts.length > 0) {
                 html += `<h2 class="section-title" style="font-size: 1.4rem;">Past Concerts</h2>
                          <div class="past-concert-grid">`;
@@ -320,16 +322,31 @@
         }
 
         async function loadConcerts() {
-            const cached = localStorage.getItem('concert_cache');
-            if (cached) renderConcerts(JSON.parse(cached));
+            const cached = localStorage.getItem('site_data_cache');
+            if (cached) {
+                try {
+                    const data = JSON.parse(cached);
+                    if (data.concerts) renderConcerts(data.concerts);
+                } catch(e) { console.error("Cache error", e); }
+            }
+
             try {
-                const response = await fetch(`${GAS_URL}?type=concerts`);
+                const response = await fetch(DATA_URL,{
+                    method: 'GET',
+                    mode: 'cors',
+                    redirect: 'follow',
+                });
                 const data = await response.json();
+                localStorage.setItem('site_data_cache', JSON.stringify(data));
+
                 if (data.concerts) {
-                    localStorage.setItem('concert_cache', JSON.stringify(data.concerts));
                     renderConcerts(data.concerts);
                 }
-            } catch (e) { console.error(e); }
+            } catch (e) { 
+                console.error("Fetch error", e);
+                const container = document.getElementById('concert-container');
+                if (!cached) container.innerHTML = "<p>データの取得に失敗しました。</p>";
+            }
         }
         window.addEventListener('DOMContentLoaded', loadConcerts);
     </script>

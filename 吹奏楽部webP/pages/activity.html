@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>活動紹介 - 明石高専吹奏楽部</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* info.html と同様の flex レイアウト */
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+        body {
+            display: flex;
+            flex-direction: column; 
+        }
+        main {
+            flex: 1; 
+        }
+
+        /* 活動紹介セクションのスタイル (eventクラスに準拠) */
+        .activity-item {
+            background: #fff;
+            padding: 30px;
+            margin-bottom: 40px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        .activity-item h2 {
+            margin: 0 0 20px 0;
+            font-size: 1.5rem;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border: none;
+            padding: 0;
+        }
+        .activity-item h2 i {
+            color: #a00030;
+            width: 30px;
+            text-align: center;
+        }
+        .activity-text {
+            font-size: 1.05rem;
+            line-height: 1.8;
+            color: #444;
+            white-space: pre-wrap; /* スプレッドシートの改行を反映 */
+        }
+
+        /* 年間スケジュールのグリッド表示 */
+        .schedule-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+        .schedule-box {
+            display: flex;
+            background: #fdf2f4;
+            border-radius: 4px;
+            border: 1px solid #fae1e6;
+            overflow: hidden;
+        }
+        .month {
+            background: #a00030;
+            color: #fff;
+            padding: 12px;
+            font-weight: bold;
+            min-width: 50px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .event-desc {
+            padding: 12px 15px;
+            flex: 1;
+            font-size: 0.95rem;
+            color: #333;
+            display: flex;
+            align-items: center;
+        }
+
+        /* 加入募集エリア */
+        .recruit-banner {
+            background: #fdf2f4;
+            padding: 40px;
+            border-radius: 8px;
+            border: 2px dashed #a00030;
+            text-align: center;
+            margin-bottom: 50px;
+        }
+        .recruit-banner h2 {
+            justify-content: center;
+            color: #a00030;
+            font-size: 1.8rem;
+        }
+
+        .loading { text-align: center; padding: 50px; color: #999; }
+    </style>
+</head>
+<body>
+
+    <header id="top-bar" class="scrolled">
+        <div class="header-left">
+            <button id="menu-btn" title="メニュー展開"><i class="fas fa-bars"></i></button>
+            <a href="../index.html" class="site-name">明石高専吹奏楽部</a>
+        </div>
+        <div class="header-right">
+            <div id="search-container">
+                <input type="text" id="search-input" placeholder="サイト内検索...">
+                <button id="search-btn" title="検索"><i class="fas fa-search"></i></button>
+            </div>
+        </div>
+    </header>
+
+    <div id="side-menu-overlay" class="overlay"></div>
+    <aside id="side-menu">
+        <nav>
+            <ul>
+                <li><a href="../info.html"><i class="fas fa-bullhorn"></i> 更新情報</a></li>
+                <li><a href="../concert.html"><i class="fas fa-music"></i> 演奏会情報</a></li>
+                <li><a href="activity.html" class="active"><i class="fas fa-users"></i> 活動紹介</a></li>
+                <li><a href="members.html"><i class="fas fa-user-friends"></i> 部員紹介</a></li>
+                <li class="admin-link"><a href="admin/index.html"><i class="fas fa-cog"></i> 運営管理</a></li>
+            </ul>
+        </nav>
+    </aside>
+
+    <main class="sub-page">
+        <div class="content-wrapper">
+            <h1 style="margin-bottom: 30px;"><i class="fas fa-users"></i> 活動紹介</h1>
+            
+            <div id="activity-feed">
+                <div class="loading"><i class="fas fa-spinner fa-spin"></i> 読み込み中...</div>
+            </div>
+        </div>
+    </main>
+
+    <footer><p>© 明石工業高等専門学校吹奏楽部 情報宣伝係</p></footer>
+
+    <script src="../js/script.js"></script>
+    <script>
+        const DATA_URL = "../data/all_data.json";
+
+        function renderActivity(data) {
+            const feed = document.getElementById('activity-feed');
+            if (!data || data.length < 2) {
+                feed.innerHTML = '<p class="loading">データが設定されていません。</p>';
+                return;
+            }
+
+            const row = data[1]; 
+            const activity = {
+                purpose: row[0] || "",
+                m04: row[1] || "-", m06: row[2] || "-", m09: row[3] || "-",
+                m11: row[4] || "-", m12: row[5] || "-", m03: row[6] || "-",
+                place: row[7] || "",
+                recruit: row[8] || ""
+            };
+
+            feed.innerHTML = `
+                <div class="activity-item">
+                    <h2><i class="fas fa-flag"></i> 活動目的</h2>
+                    <div class="activity-text">${activity.purpose}</div>
+                </div>
+
+                <div class="activity-item">
+                    <h2><i class="fas fa-calendar-alt"></i> 年間スケジュール</h2>
+                    <div class="schedule-grid">
+                        <div class="schedule-box"><div class="month">4月</div><div class="event-desc">${activity.m04}</div></div>
+                        <div class="schedule-box"><div class="month">6月</div><div class="event-desc">${activity.m06}</div></div>
+                        <div class="schedule-box"><div class="month">9月</div><div class="event-desc">${activity.m09}</div></div>
+                        <div class="schedule-box"><div class="month">11月</div><div class="event-desc">${activity.m11}</div></div>
+                        <div class="schedule-box"><div class="month">12月</div><div class="event-desc">${activity.m12}</div></div>
+                        <div class="schedule-box"><div class="month">3月</div><div class="event-desc">${activity.m03}</div></div>
+                    </div>
+                </div>
+
+                <div class="activity-item">
+                    <h2><i class="fas fa-map-marker-alt"></i> 活動場所・日時</h2>
+                    <div class="activity-text">${activity.place}</div>
+                </div>
+
+                <div class="recruit-banner">
+                    <h2><i class="fas fa-heart"></i> 部員募集中！</h2>
+                    <div class="activity-text" style="text-align:center;">${activity.recruit}</div>
+                </div>
+            `;
+        }
+
+        async function loadActivity() {
+            const cached = localStorage.getItem('site_data_cache');
+            if (cached) {
+                const data = JSON.parse(cached);
+                if (data.activity) renderActivity(data.activity);
+            }
+
+            try {
+                const response = await fetch(DATA_URL + "?t=" + Date.now());
+                const data = await response.json();
+                localStorage.setItem('site_data_cache', JSON.stringify(data));
+                if (data.activity) renderActivity(data.activity);
+            } catch (e) {
+                if (!cached) {
+                    document.getElementById('activity-feed').innerHTML = '<p class="loading">取得失敗</p>';
+                }
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', loadActivity);
+    </script>
+</body>
+</html>
