@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理パネル | 明石高専吹奏楽部</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --admin-red: #a00030; --sidebar-bg: #2c3e50; }
+        body { display: flex; background: #f4f7f6; min-height: 100vh; margin: 0; color: #333; font-family: sans-serif; }
+        .admin-sidebar { width: 260px; height: 100vh; background: var(--sidebar-bg); color: white; position: fixed; z-index: 100; }
+        .admin-sidebar .admin-title { padding: 25px 20px; font-weight: bold; font-size: 1.1rem; background: rgba(0,0,0,0.2); }
+        .admin-sidebar ul { list-style: none; padding: 0; }
+        .admin-sidebar li a { display: block; padding: 18px 20px; color: #bdc3c7; text-decoration: none; border-left: 5px solid transparent; cursor: pointer; }
+        .admin-sidebar li a:hover, .admin-sidebar li a.active { background: #34495e; color: white; border-left: 4px solid var(--admin-red); }
+        .admin-main { flex: 1; margin-left: 260px; padding: 40px; }
+        .admin-panel { display: none; }
+        .admin-panel.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .admin-card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 25px; }
+        h1 { margin-bottom: 25px; border-left: 8px solid var(--admin-red); padding-left: 15px; font-size: 1.5rem; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 8px; font-size: 0.95rem; }
+        input[type="text"], input[type="date"], input[type="file"], textarea, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem; font-family: inherit; box-sizing: border-box; }
+        
+        #existing-concert-list { 
+            display: none; background: #fff; border: 1px solid #ddd; border-radius: 4px; 
+            margin-bottom: 20px; max-height: 200px; overflow-y: auto;
+        }
+        .concert-selectable-item { 
+            padding: 12px 15px; border-bottom: 1px solid #eee; cursor: pointer;
+            transition: background 0.2s; display: flex; justify-content: space-between; align-items: center;
+        }
+        .concert-selectable-item:hover { background: #fdf2f4; }
+        .concert-selectable-item.selected { background: #fdf2f4; border-left: 4px solid var(--admin-red); font-weight: bold; }
+        .concert-selectable-item small { color: #888; }
+
+        .btn-action { background: var(--admin-red); color: white; border: none; padding: 14px 28px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 1rem; width: 100%; }
+        .btn-action:hover { background: #800028; }
+        .btn-action:disabled { background: #ccc; cursor: not-allowed; }
+        .check-link { background: #fdf2f4; padding: 15px; border-radius: 4px; border: 1px dashed var(--admin-red); }
+        
+        .schedule-row { margin-bottom: 10px; border-left: 3px solid #eee; padding-left: 10px; }
+        .schedule-label { font-size: 0.85rem; color: #666; margin-bottom: 4px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <aside class="admin-sidebar">
+        <div class="admin-title"><i class="fas fa-tools"></i> 運営管理パネル</div>
+        <ul id="admin-menu">
+            <li><a data-target="panel-news" class="active"><i class="fas fa-bullhorn"></i> 更新情報追加</a></li>
+            <li><a data-target="panel-concert"><i class="fas fa-music"></i> 演奏会情報の管理</a></li>
+            <li><a data-target="panel-activity"><i class="fas fa-users"></i> 活動紹介編集</a></li>
+            <li><a data-target="panel-members"><i class="fas fa-user-friends"></i> 部員紹介編集</a></li>
+            <li style="margin-top: 40px;"><a href="../../index.html"><i class="fas fa-home"></i> サイトに戻る</a></li>
+        </ul>
+    </aside>
+
+    <main class="admin-main">
+        
+        <section id="panel-news" class="admin-panel active">
+            <h1>更新情報の投稿</h1>
+            <form class="admin-card" id="form-news">
+                <div class="form-group">
+                    <label>カテゴリ</label>
+                    <select id="news-category"><option>お知らせ</option><option>演奏会</option><option>重要</option><option>募集</option></select>
+                </div>
+                <div class="form-group">
+                    <label>表題</label>
+                    <input type="text" id="news-title" placeholder="例：新入部員募集中！" required>
+                </div>
+                <div class="form-group">
+                    <label>詳細本文</label>
+                    <textarea id="news-body" rows="10" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>画像アップロード (任意)</label>
+                    <input type="file" id="news-file" accept="image/*,.pdf">
+                </div>
+                <button type="button" class="btn-action" onclick="submitNews()">反映する</button>
+            </form>
+        </section>
+        
+        <section id="panel-concert" class="admin-panel">
+            <h1>演奏会情報の管理</h1>
+            <form class="admin-card" id="form-concert">
+                <div class="form-group">
+                    <label>モード切替</label>
+                    <select id="concert-op-mode" onchange="toggleConcertList()">
+                        <option value="new">新規登録</option>
+                        <option value="edit">既存データの修正 (リストから選択)</option>
+                    </select>
+                </div>
+
+                <div id="existing-concert-list">
+                    <div style="padding:10px; font-size:0.8rem;">データを読み込んでいます...</div>
+                </div>
+
+                <div class="form-group">
+                    <label>演奏会名（タイトル）</label>
+                    <input type="text" id="concert-title" placeholder="例：第40回 定期演奏会" required>
+                </div>
+
+                <div style="display: flex; gap: 15px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label>開催日</label>
+                        <input type="date" id="concert-date" required>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>開演時間</label>
+                        <input type="text" id="concert-time" placeholder="13:30開場 / 14:00開演">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>会場</label>
+                    <input type="text" id="concert-venue" placeholder="例：明石市民会館 大ホール">
+                </div>
+
+                <div class="form-group">
+                    <label>チラシ画像 または プログラムPDF (任意)</label>
+                    <input type="file" id="concert-file" accept="image/*,.pdf">
+                    <small style="color: #888;">※修正モードで画像を選択しなかった場合、既存の画像が保持されます。</small>
+                </div>
+
+                <div class="form-group">
+                    <label>詳細説明（プログラム曲目など）</label>
+                    <textarea id="concert-desc" rows="6" placeholder="第1部：...&#13;&#10;第2部：..."></textarea>
+                </div>
+                
+                <div class="check-link">
+                    <label style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="concert-sync" checked> 
+                        <span style="font-size: 0.9rem;">更新情報(What's New)にも「演奏会」カテゴリで同時投稿する</span>
+                    </label>
+                </div><br>
+                
+                <button type="button" class="btn-action" onclick="submitConcert(this)">反映する</button>
+            </form>
+        </section>
+
+        <section id="panel-activity" class="admin-panel">
+            <h1>活動紹介の編集</h1>
+            <form class="admin-card" id="form-activity">
+                <div class="form-group"><label>① 目的</label><textarea id="act-purpose" rows="3" placeholder="部の目標など"></textarea></div>
+                
+                <div class="form-group">
+                    <label>② 年間スケジュール</label>
+                    <div class="schedule-row"><div class="schedule-label">4月</div><textarea id="act-m04" rows="2"></textarea></div>
+                    <div class="schedule-row"><div class="schedule-label">6月</div><textarea id="act-m06" rows="2"></textarea></div>
+                    <div class="schedule-row"><div class="schedule-label">9月</div><textarea id="act-m09" rows="2"></textarea></div>
+                    <div class="schedule-row"><div class="schedule-label">11月</div><textarea id="act-m11" rows="2"></textarea></div>
+                    <div class="schedule-row"><div class="schedule-label">12月</div><textarea id="act-m12" rows="2"></textarea></div>
+                    <div class="schedule-row"><div class="schedule-label">3月</div><textarea id="act-m03" rows="2"></textarea></div>
+                </div>
+
+                <div class="form-group"><label>③ 活動場所・日時</label><textarea id="act-place" rows="3"></textarea></div>
+                <div class="form-group"><label>④ 部員募集コメント</label><textarea id="act-recruit" rows="3"></textarea></div>
+                <button type="button" class="btn-action" onclick="submitActivity()">内容を更新</button>
+            </form>
+        </section>
+
+        <section id="panel-members" class="admin-panel">
+            <h1>部員構成の管理</h1>
+            <form class="admin-card" id="form-members">
+                <div class="form-group">
+                    <label>編集パート</label>
+                    <select id="mem-part">
+                        <option value="1">Flute</option><option value="2">Clarinet</option><option value="3">Sax</option>
+                        <option value="4">Trumpet</option><option value="5">Horn</option><option value="6">Trombone</option>
+                        <option value="7">Euph</option><option value="8">Tuba</option><option value="9">Bass</option>
+                        <option value="10">Perc</option><option value="11">Conductor</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>紹介コメント</label><input type="text" id="mem-comment" placeholder="例：個性豊かなメンバーが揃っています！"></div>
+                <div class="form-group"><label>在籍部員 (名前・学年など)</label><textarea id="mem-details" rows="5"></textarea></div>
+                <button type="button" class="btn-action" onclick="submitMembers()">保存する</button>
+            </form>
+        </section>
+    </main>
+
+    <script>
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbwhxlkO95GImhR9lSgHaFf0PB_s5o1tjoOd19pP20Q9TbqaMlLpCoQOohZv-PCaHlWZ8A/exec";
+        const DATA_URL = "../../data/all_data.json";
+
+        const toBase64 = file => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+
+        async function postToGAS(data, btn, formId) {
+            const originalText = btn.innerText;
+            btn.innerText = "送信中...";
+            btn.disabled = true;
+            try {
+                const response = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(data) });
+                const result = await response.json();
+                if (result.result === "Success") {
+                    alert("反映依頼を受け付けました！\nGitHub経由で公開されるため、サイトへの反映には1〜3分ほどかかります。");
+                    if (formId) document.getElementById(formId).reset(); 
+                    if (formId === 'form-concert') toggleConcertList(); // 修正リストを閉じる
+                } else {
+                    alert("サーバーエラー: " + result.result);
+                }
+            } catch (e) {
+                alert('送信に失敗しました。ネット環境を確認してください。');
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        }
+        async function loadExistingConcerts() {
+            const listContainer = document.getElementById('existing-concert-list');
+            try {
+                const response = await fetch(DATA_URL + "?t=" + Date.now());
+                const data = await response.json();
+                if (data.concerts && data.concerts.length > 1) {
+                    let html = "";
+                    data.concerts.slice(1).reverse().forEach(row => {
+                        html += `
+                            <div class="concert-selectable-item" onclick='fillConcertForm(${JSON.stringify(row).replace(/'/g, "&#39;")})'>
+                                <span>${row[1]}</span>
+                                <small>${String(row[2]).split('T')[0]}</small>
+                            </div>`;
+                    });
+                    listContainer.innerHTML = html;
+                } else {
+                    listContainer.innerHTML = '<div style="padding:10px;">表示できるデータがありません。</div>';
+                }
+            } catch (e) {
+                listContainer.innerHTML = '<div style="padding:10px; color:red;">データの読み込みに失敗しました。</div>';
+            }
+        }
+
+        function fillConcertForm(row) {
+            document.getElementById('concert-title').value = row[1];
+            document.getElementById('concert-date').value = String(row[2]).split('T')[0];
+            document.getElementById('concert-time').value = row[3] || "";
+            document.getElementById('concert-venue').value = row[4] || "";
+            document.getElementById('concert-desc').value = row[5] || "";
+            
+            document.querySelectorAll('.concert-selectable-item').forEach(el => el.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+            alert("データをフォームに読み込みました。修正して「反映する」を押してください。");
+        }
+
+        function toggleConcertList() {
+            const mode = document.getElementById('concert-op-mode').value;
+            const container = document.getElementById('existing-concert-list');
+            if (mode === 'edit') {
+                container.style.display = 'block';
+                loadExistingConcerts();
+            } else {
+                container.style.display = 'none';
+            }
+        }
+        async function submitNews() {
+            const fileInput = document.getElementById('news-file');
+            const file = fileInput.files[0];
+            let fileData = null;
+            if (file) fileData = await toBase64(file);
+
+            const data = {
+                type: "news",
+                category: document.getElementById('news-category').value,
+                title: document.getElementById('news-title').value,
+                body: document.getElementById('news-body').value,
+                image: fileData,
+                fileName: file?.name || "",
+                mimeType: file?.type || ""
+            };
+            await postToGAS(data, event.target, 'form-news');
+        }
+        
+        async function submitConcert(btn) {
+            const fileInput = document.getElementById('concert-file');
+            let img = null;
+            if (fileInput.files[0]) img = await toBase64(fileInput.files[0]);
+
+            const data = {
+                type: "concerts",
+                title: document.getElementById('concert-title').value,
+                date: document.getElementById('concert-date').value,
+                time: document.getElementById('concert-time').value, 
+                venue: document.getElementById('concert-venue').value,
+                desc: document.getElementById('concert-desc').value,
+                syncNews: document.getElementById('concert-sync').checked,
+                image: img,
+                fileName: fileInput.files[0]?.name || ""
+            };
+            if (!data.title || !data.date) {
+                alert("演奏会名と開催日を入力してください。");
+                return;
+            }
+            await postToGAS(data, btn, 'form-concert');
+        }
+
+        async function submitActivity() {
+            const data = {
+                type: "activity",
+                payload: {
+                    purpose: document.getElementById('act-purpose').value,
+                    m04: document.getElementById('act-m04').value,
+                    m06: document.getElementById('act-m06').value,
+                    m09: document.getElementById('act-m09').value,
+                    m11: document.getElementById('act-m11').value,
+                    m12: document.getElementById('act-m12').value,
+                    m03: document.getElementById('act-m03').value,
+                    place: document.getElementById('act-place').value,
+                    recruit: document.getElementById('act-recruit').value
+                }
+            };
+            await postToGAS(data, event.target, 'form-activity');
+        }
+
+        async function submitMembers() {
+            const data = {
+                type: "members",
+                partIndex: document.getElementById('mem-part').value,
+                comment: document.getElementById('mem-comment').value,
+                details: document.getElementById('mem-details').value
+            };
+            await postToGAS(data, event.target, 'form-members');
+        }
+        document.querySelectorAll('#admin-menu a[data-target]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.querySelectorAll('#admin-menu a').forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
+                document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
+                document.getElementById(link.dataset.target).classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>
