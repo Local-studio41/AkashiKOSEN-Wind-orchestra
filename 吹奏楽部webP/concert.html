@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>演奏会情報 - 明石高専吹奏楽部</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+        body {
+            display: flex;
+            flex-direction: column; 
+        }
+        main {
+            flex: 1; 
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.9);
+            cursor: zoom-out;
+        }
+        .modal-content {
+            margin: auto;
+            display: block;
+            max-width: 90%;
+            max-height: 90%;
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 20px rgba(255,255,255,0.2);
+        }
+        .modal-close {
+            position: absolute;
+            top: 20px; right: 35px;
+            color: #fff;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .concert-section { margin-bottom: 50px; }
+        .section-title {
+            border-bottom: 2px solid #2c3e50;
+            padding-bottom: 10px;
+            margin-bottom: 30px;
+            font-size: 1.8rem;
+        }
+        .next-concert-card {
+            background: #fff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            margin-bottom: 60px;
+            display: flex;
+            flex-direction: column; 
+        }
+        .next-concert-header {
+            padding: 30px 40px 15px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .next-concert-header h2 { 
+            font-size: 1.6rem;
+            color: #000; 
+            margin: 0; 
+            line-height: 1.1;
+        }
+        .next-concert-body {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: stretch;
+        }
+        .next-concert-info {
+            flex: 1.5;
+            padding: 30px 40px 40px;
+            min-width: 300px;
+        }
+        .concert-details-table { width: 100%; border-collapse: collapse; }
+        .concert-details-table th, .concert-details-table td {
+            padding: 15px 5px; 
+            border-bottom: 1px solid #eee;
+            text-align: left;
+            font-size: 1.1rem;
+        }
+        .concert-details-table th { width: 80px; color: #777; font-weight: bold; }
+        .next-concert-img {
+            flex: 1;
+            min-width: 300px;
+            position: relative;
+            background: #f8f8f8;
+            line-height: 0;
+            display: flex;
+            align-items: flex-start;
+        }
+        .next-concert-img img {
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+            object-position: top;
+            display: block;
+        }
+        .concert-description {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            margin-top: 20px;
+            line-height: 1.8;
+            color: #333;
+            font-size: 1.05rem;
+        }
+        .zoom-btn {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: 0.3s;
+            display: none;
+            z-index: 10;
+        }
+        .zoom-btn:hover { background: #a00030; }
+        .past-concert-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+        }
+        .past-item {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #eee;
+            transition: transform 0.3s;
+        }
+        .past-item:hover { transform: translateY(-5px); }
+        .past-item h3 { margin: 0 0 10px 0; font-size: 1.2rem; }
+        .past-date { font-size: 0.85rem; color: #888; margin-bottom: 10px; }
+        .loading { text-align: center; padding: 50px; color: #999; }
+        
+        @media (min-width: 1024px) {
+            .zoom-btn { display: block; } 
+        }
+        @media (max-width: 768px) {
+            .next-concert-header { padding: 25px 20px 10px; }
+            .next-concert-header h2 { font-size: 1.5rem; }
+            
+            .next-concert-body { flex-direction: column; }
+            .next-concert-info { order: 1; padding: 20px; }
+            .next-concert-img { order: 2; min-height: 300px; }
+            
+            .concert-details-table th, .concert-details-table td {
+                padding: 12px 5px;
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header id="top-bar" class="scrolled">
+        <div class="header-left">
+            <button id="menu-btn"><i class="fas fa-bars"></i></button>
+            <a href="index.html" class="site-name">明石高専吹奏楽部</a>
+        </div>
+    </header>
+
+    <div id="side-menu-overlay" class="overlay"></div>
+    <aside id="side-menu">
+        <nav>
+            <ul>
+                <li><a href="info.html"><i class="fas fa-bullhorn"></i> 更新情報</a></li>
+                <li><a href="concert.html" class="active"><i class="fas fa-music"></i> 演奏会情報</a></li>
+                <li><a href="pages/activity.html"><i class="fas fa-users"></i> 活動紹介</a></li>
+                <li><a href="pages/members.html"><i class="fas fa-user-friends"></i> 部員紹介</a></li>
+            </ul>
+        </nav>
+    </aside>
+
+    <main class="sub-page">
+        <div class="content-wrapper">
+            <h1 class="section-title"><i class="fas fa-music"></i> 演奏会情報</h1>
+            
+            <div id="concert-container">
+                <div class="loading"><i class="fas fa-spinner fa-spin"></i> 読み込み中...</div>
+            </div>
+        </div>
+    </main>
+
+    <footer><p>© 明石工業高等専門学校吹奏楽部 情報宣伝係</p></footer>
+    <div id="imageModal" class="modal" onclick="closeModal()">
+        <span class="modal-close">&times;</span>
+        <img class="modal-content" id="modalImg" onclick="event.stopPropagation()">
+    </div>
+
+    <script src="js/script.js"></script>
+    <script>
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbwhxlkO95GImhR9lSgHaFf0PB_s5o1tjoOd19pP20Q9TbqaMlLpCoQOohZv-PCaHlWZ8A/exec";
+        
+        function getFileDisplayInfo(url) {
+            if (!url || typeof url !== 'string') return null;
+            
+            const match = url.match(/[-\w]{25,}/);
+            if (!match) return url.startsWith('http') ? { url: url, isPdf: false } : null;
+            const fileId = match[0];
+            const isPdf = url.toLowerCase().includes('pdf');
+            
+            if (isPdf) {
+                return {
+                    url: `https://drive.google.com/file/d/${fileId}/view?usp=sharing`,
+                    isPdf: true
+                };
+            } else {
+                return {
+                    url: `https://lh3.googleusercontent.com/d/${fileId}=s3200`,
+                    isPdf: false
+                };
+            }
+        }
+        function openModal(url) {
+            const modal = document.getElementById("imageModal");
+            const modalImg = document.getElementById("modalImg");
+            modal.style.display = "flex"; 
+            modalImg.src = url;
+            document.body.style.overflow = "hidden";
+        }
+        function closeModal() {
+            const modal = document.getElementById("imageModal");
+            modal.style.display = "none";
+            document.body.style.overflow = "auto";
+        }
+        function renderConcerts(rows) {
+            const container = document.getElementById('concert-container');
+            if (!rows || rows.length <= 1) {
+                container.innerHTML = "<p>現在予定されている演奏会はありません。</p>";
+                return;
+            }
+
+            const data = rows.slice(1).reverse(); 
+            const next = data[0];
+            const pasts = data.slice(1);
+            const formatDate = (val) => {
+                if (!val) return "";
+                let str = String(val).split('T')[0];
+                return str.replace(/-/g, '.');
+            };
+
+            const concertDate = formatDate(next[2]);
+            const concertTime = formatDate(next[3]);
+
+            const nextMedia = getFileDisplayInfo(next[6]); 
+            let nextMediaHtml = '';
+            
+            if (nextMedia) {
+                if (nextMedia.isPdf) {
+                    nextMediaHtml = `
+                        <div style="width: 100%; height: 100%; min-height: 500px;">
+                            <iframe src="${nextMedia.url.replace('/view?usp=sharing', '/preview')}" 
+                             width="100%" height="100%" style="border: none; min-height: 500px;"></iframe>
+                        </div>`;
+                } else {
+                    nextMediaHtml = `
+                        <img src="${nextMedia.url}" alt="演奏会ポスター">
+                        <button class="zoom-btn" onclick="openModal('${nextMedia.url}')">
+                            <i class="fas fa-search-plus"></i> ポスターを拡大
+                        </button>`;
+                }
+            }
+            let html = `
+                <section class="concert-section">
+                    <div class="next-concert-card">
+                        <div class="next-concert-header">
+                            <h2>${next[1]}</h2>
+                        </div>
+
+                        <div class="next-concert-body">
+                            <div class="next-concert-info">
+                                <table class="concert-details-table">
+                                    <tr><th>日程</th><td>${concertDate}</td></tr>
+                                    <tr><th>時間</th><td>${concertTime}</td></tr>
+                                    <tr><th>会場</th><td>${next[4]}</td></tr>
+                                </table>
+                                <div class="concert-description">${String(next[5] || "").trim()}</div>
+                            </div>
+
+                            <div class="next-concert-img">
+                                ${nextMediaHtml || '<div class="no-image">No Image</div>'}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            `;
+            if (pasts.length > 0) {
+                html += `<h2 class="section-title" style="font-size: 1.4rem;">Past Concerts</h2>
+                         <div class="past-concert-grid">`;
+                pasts.forEach(row => {
+                    const pastMedia = getFileDisplayInfo(row[6]);
+                    html += `
+                        <div class="past-item">
+                            <div class="past-date">${formatDate(row[2])}</div>
+                            <h3>${row[1]}</h3>
+                            <div style="font-size: 0.9rem; color: #555; margin-bottom:10px;">
+                                <i class="fas fa-map-marker-alt"></i> ${row[4]}
+                            </div>
+                            ${pastMedia ? `<a href="${pastMedia.url}" target="_blank" style="font-size:0.8rem; color:#a00030; text-decoration:none;"><i class="fas fa-file-alt"></i> 資料を見る</a>` : ''}
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+            }
+            container.innerHTML = html;
+        }
+
+        async function loadConcerts() {
+            const cached = localStorage.getItem('concert_cache');
+            if (cached) renderConcerts(JSON.parse(cached));
+            try {
+                const response = await fetch(`${GAS_URL}?type=concerts`);
+                const data = await response.json();
+                if (data.concerts) {
+                    localStorage.setItem('concert_cache', JSON.stringify(data.concerts));
+                    renderConcerts(data.concerts);
+                }
+            } catch (e) { console.error(e); }
+        }
+        window.addEventListener('DOMContentLoaded', loadConcerts);
+    </script>
+</body>
+</html>

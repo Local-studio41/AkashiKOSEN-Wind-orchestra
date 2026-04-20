@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>更新情報 - 明石高専吹奏楽部</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+        body {
+            display: flex;
+            flex-direction: column; 
+        }
+        main {
+            flex: 1; 
+        }
+        .event {
+            background: #fff;
+            padding: 30px;
+            margin-bottom: 40px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        .event-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start; 
+            margin-bottom: 20px;
+            gap: 15px;
+        }
+        .title-category {
+            display: flex;
+            align-items: center;
+            gap: 15px; 
+            flex: 1;
+        }
+        .title-category h2 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: #333;
+            line-height: 1.3;
+            border: none; 
+            padding: 0;
+        }
+        .category {
+            padding: 3px 12px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: #fff;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        .cat-演奏会 { background: #a00030; }
+        .cat-お知らせ { background: #2c3e50; }
+        .cat-重要 { background: #e74c3c; }
+        .cat-募集 { background: #27ae60; }
+        .cat-default { background: #95a5a6; }
+        .date {
+            color: #888;
+            font-size: 0.95rem;
+            white-space: nowrap;
+            padding-top: 5px;
+        }
+        .content {
+            font-size: 1.05rem;
+            line-height: 1.8;
+            color: #444;
+            margin-bottom: 20px;
+            white-space: pre-wrap; 
+        }
+        .event img {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            margin: 20px auto 0;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .loading { text-align: center; padding: 50px; color: #999; }
+    </style>
+</head>
+<body>
+
+    <header id="top-bar" class="scrolled">
+        <div class="header-left">
+            <button id="menu-btn" title="メニュー展開"><i class="fas fa-bars"></i></button>
+            <a href="index.html" class="site-name">明石高専吹奏楽部</a>
+        </div>
+        <div class="header-right">
+            <div id="search-container">
+                <input type="text" id="search-input" placeholder="サイト内検索...">
+                <button id="search-btn" title="検索"><i class="fas fa-search"></i></button>
+            </div>
+        </div>
+    </header>
+
+    <div id="side-menu-overlay" class="overlay"></div>
+    <aside id="side-menu">
+        <nav>
+            <ul>
+                <li><a href="info.html" class="active"><i class="fas fa-bullhorn"></i> 更新情報</a></li>
+                <li><a href="concert.html"><i class="fas fa-music"></i> 演奏会情報</a></li>
+                <li><a href="pages/activity.html"><i class="fas fa-users"></i> 活動紹介</a></li>
+                <li><a href="pages/members.html"><i class="fas fa-user-friends"></i> 部員紹介</a></li>
+                <li class="admin-link"><a href="pages/admin/index.html"><i class="fas fa-cog"></i> 運営管理</a></li>
+            </ul>
+        </nav>
+    </aside>
+
+    <main class="sub-page">
+        <div class="content-wrapper">
+            <section id="info-list">
+                <h1 style="margin-bottom: 30px;"><i class="fas fa-bullhorn"></i> 更新情報</h1>
+                
+                <div id="info-feed">
+                    <div class="loading"><i class="fas fa-spinner fa-spin"></i> 読み込み中...<p>少し時間がかかります</p></div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer><p>&copy; 明石工業高等専門学校吹奏楽部 情報宣伝係</p></footer>
+
+    <script src="js/script.js"></script>
+    <script>
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbwhxlkO95GImhR9lSgHaFf0PB_s5o1tjoOd19pP20Q9TbqaMlLpCoQOohZv-PCaHlWZ8A/exec";
+        
+        function getFileDisplayInfo(url) {
+            if (!url || typeof url !== 'string') return null;
+            const match = url.match(/[-\w]{25,}/);
+            if (!match) return url.startsWith('http') ? { url: url, isPdf: false } : null;
+            const fileId = match[0];
+            const isPdf = url.toLowerCase().includes('pdf');
+            if (isPdf) {
+                return {
+                    url: `https://drive.google.com/file/d/${fileId}/view?usp=sharing`,
+                    isPdf: true
+                };
+            } else {
+                return {
+                    url: `https://lh3.googleusercontent.com/d/${fileId}=s3200`,
+                    isPdf: false
+                };
+            }
+        }
+        
+        function renderNewsList(newsRows) {
+            const feed = document.getElementById('info-feed');
+            if (!newsRows || newsRows.length <= 1) {
+                feed.innerHTML = '<p class="loading">更新情報はありません。</p>';
+                return;
+            }
+
+            const items = newsRows.slice(1).reverse();
+            let html = '';
+
+            items.forEach(row => {
+                const date = row[0] || '';
+                const cat  = row[1] || 'お知らせ';
+                const title = row[2] || '無題';
+                const body = row[3] || '';
+                const fileRaw  = row[4];
+
+                const fileInfo = getFileDisplayInfo(fileRaw);
+                const catClass = `cat-${cat}`;
+
+                let mediaHtml = '';
+                if (fileInfo) {
+                    if(fileInfo.isPdf){
+                        mediaHtml = `
+                        <div style="margin-top: 15px; width: 100%; height: 500px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+                            <iframe src="${fileInfo.url.replace('/view?usp=sharing', '/preview')}"
+                             width="100%" height="100%" loading="lazy" allow="autoplay" style="border: none;">
+                            </iframe>
+                        </div>
+                        <div style="margin-top: 10px; text-align: right;">
+                            <a href="${fileInfo.url}" target="_blank" style="font-size: 0.85rem; color: #2c3e50; text-decoration: none;">
+                                <i class="fas fa-external-link-alt"></i> 別ウィンドウで大きく開く
+                            </a>
+                        </div>`;
+                    }else{
+                        mediaHtml = `<img src="${fileInfo.url}" alt="投稿画像" loading="lazy" onerror="this.style.display='none';">`;
+                    }
+                }
+
+                html += `
+                    <div class="event">
+                        <div class="event-header">
+                            <div class="title-category">
+                                <h2>${title}</h2>
+                                <span class="category ${catClass}">${cat}</span>
+                            </div>
+                            <div class="date">${date}</div>
+                        </div>
+                        <div class="content">${body}</div>
+                        ${mediaHtml}
+                    </div>
+                `;
+            });
+            feed.innerHTML = html;
+        }
+
+        async function loadNews() {
+            const feed = document.getElementById('info-feed');
+            const cached = localStorage.getItem('full_news_cache');
+            if (cached) {
+                try {
+                    renderNewsList(JSON.parse(cached));
+                } catch(e) { console.error("Cache error", e); }
+            }
+
+            try {
+                const response = await fetch(`${GAS_URL}?type=news`);
+                const data = await response.json();
+                
+                if (data.news) {
+                    localStorage.setItem('full_news_cache', JSON.stringify(data.news));
+                    renderNewsList(data.news);
+                }
+            } catch (e) {
+                console.error("エラーの詳細:", e);
+                if (!cached) {
+                    feed.innerHTML = '<p class="loading">情報の取得に失敗しました。再読み込みしても変わらない場合、弊部SNSまでおしらせください。</p>';
+                }
+            }
+        }
+        
+        window.addEventListener('DOMContentLoaded', loadNews);
+    </script>
+</body>
+</html>

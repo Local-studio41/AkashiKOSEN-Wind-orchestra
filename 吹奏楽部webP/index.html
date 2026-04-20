@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>明石高専吹奏楽部 公式サイト</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+
+    <header id="top-bar" class="transparent">
+        <div class="header-left">
+            <button id="menu-btn" title="メニュー展開"><i class="fas fa-bars"></i></button>
+            <span class="site-name">明石高専吹奏楽部</span>
+        </div>
+        <div class="header-right">
+            <div id="search-container">
+                <input type="text" id="search-input" placeholder="サイト内検索...">
+                <button id="search-btn" title="検索"><i class="fas fa-search"></i></button>
+            </div>
+        </div>
+    </header>
+
+    <div id="side-menu-overlay" class="overlay"></div>
+    <aside id="side-menu">
+        <nav>
+            <ul>
+                <li><a href="info.html"><i class="fas fa-bullhorn"></i> 更新情報</a></li>
+                <li><a href="concert.html"><i class="fas fa-music"></i> 演奏会情報</a></li>
+                <li><a href="pages/activity.html"><i class="fas fa-users"></i> 活動紹介</a></li>
+                <li><a href="pages/members.html"><i class="fas fa-user-friends"></i> 部員紹介</a></li>
+                <li class="admin-link"><a href="pages/admin/index.html"><i class="fas fa-cog"></i> 運営管理</a></li>
+            </ul>
+        </nav>
+    </aside>
+
+    <main>
+        <section class="hero-section">
+            <div class="hero-content">
+                <h2 class="hero-title">明石高専吹奏楽部</h2>
+                <p class="hero-subtitle">Akashi KOSEN Wind Orchestra</p>
+            </div>
+        </section>
+        
+        <section id="page-links">
+            <div class="section-title-container">
+                <h2><i class="fas fa-link"></i> Contents</h2>
+            </div>
+            <div class="simple-nav">
+                <a href="info.html">更新情報</a>
+                <a href="concert.html">演奏会情報</a>
+                <a href="pages/activity.html">活動紹介</a>
+                <a href="pages/members.html">部員紹介</a>
+            </div>
+        </section>    
+
+        <div class="content-wrapper">
+            <section id="news">
+                <h2><i class="fas fa-newspaper"></i> What's New</h2>
+                <ul class="news-list">
+                </ul>
+                <div class="more-link"><a href="info.html">もっと見る ≫</a></div>
+            </section>
+
+            <section id="sns">
+                <h2><i class="fas fa-share-alt"></i> Official SNS</h2>
+                <div class="sns-icons">
+                    <a href="#" class="x-twitter"><i class="fa-brands fa-x-twitter"></i></a>
+                    <a href="#" class="instagram"><i class="fa-brands fa-instagram"></i></a>
+                    <a href="#" class="facebook"><i class="fa-brands fa-facebook"></i></a>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer><p>&copy; 明石工業高等専門学校吹奏楽部 情報宣伝係</p></footer>
+    <script src="js/script.js"></script>
+    
+    <script>
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbwhxlkO95GImhR9lSgHaFf0PB_s5o1tjoOd19pP20Q9TbqaMlLpCoQOohZv-PCaHlWZ8A/exec";
+
+        function renderNews(items) {
+            const newsList = document.querySelector('.news-list');
+            let html = '';
+            
+            items.forEach(row => {
+                const date = row[0] || '';  
+                const cat = row[1] || 'お知らせ';
+                const title = row[2] || '';
+                const catClass = `cat-${cat}`;
+
+                html += `<li>
+                            <div class="news-item-static">
+                                <span class="news-date">${date}</span>
+                                <span class="news-category ${catClass}">${cat}</span>
+                                <span class="news-title">${title}</span>
+                            </div>
+                        </li>`;
+            });
+            newsList.innerHTML = html;
+        }
+
+        async function loadLatestNews() {
+            const newsList = document.querySelector('.news-list');
+            
+            const cachedData = localStorage.getItem('latest_news_cache');
+            if (cachedData) {
+                renderNews(JSON.parse(cachedData));
+            } else {
+                newsList.innerHTML = '<li>読み込み中...</li>';
+            }
+
+            try {
+                const response = await fetch(`${GAS_URL}?type=news`);
+                const data = await response.json();
+                const newsRows = data.news;
+
+                if (newsRows && newsRows.length > 1) {
+                    const latestItems = newsRows.slice(1).reverse().slice(0, 3);
+                    localStorage.setItem('latest_news_cache', JSON.stringify(latestItems));
+                    renderNews(latestItems);
+                } else if (!cachedData) {
+                    newsList.innerHTML = '<li>更新情報はありません。</li>';
+                }
+
+            } catch (e) {
+                console.error("News Load Error:", e);
+                if (!cachedData) {
+                    newsList.innerHTML = '<li>情報の取得に失敗しました。</li>';
+                }
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', loadLatestNews);
+    </script>
+</body>
+</html>
